@@ -88,5 +88,22 @@ func (s *Storage) GetURL(alias string) (string, error) {
 	return resultUrl, nil
 }
 
-// TODO: implement method
-// func (s *Storage) DeleteURL(alias string) error
+func (s *Storage) RemoveURL(alias string) error {
+	const op = "storage.sqlite.RemoveURL"
+
+	stmt, err := s.db.Prepare("DELETE FROM url WHERE alias = ?")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	_, err = stmt.Exec(alias)
+
+	if errors.Is(err, storage.ErrURLNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
