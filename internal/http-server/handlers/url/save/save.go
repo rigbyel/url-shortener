@@ -15,7 +15,7 @@ import (
 )
 
 type Request struct {
-	URL		string `json:"url" validate:"required"`
+	URL		string `json:"url" validate:"required,url"`
 	Alias	string `json:"alias,omitempty"`
 }
 
@@ -57,7 +57,6 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			validateErr := err.(validator.ValidationErrors)
 			log.Error("invalid request", sl.Err(err))
 
-			render.JSON(w, r, resp.Error("invalid request"))
 			render.JSON(w, r, resp.ValidationErrors(validateErr))
 
 			return
