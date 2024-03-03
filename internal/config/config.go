@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"flag"
 	"os"
 	"time"
 
@@ -9,37 +9,53 @@ import (
 )
 
 type Config struct {
-	Env 		string `yaml:"env" env:"ENV" env-required:"true"`
+	Env         string `yaml:"env" env:"ENV" env-required:"true"`
 	StoragePath string `yaml:"storage_path" env-required:"true"`
-	HTTPServer	`yaml:"http_server"`
+	HTTPServer  `yaml:"http_server"`
 }
 
 type HTTPServer struct {
-	Address		 string			`yaml:"address" env-default:"localhost:8080"`
-	Timeout		 time.Duration	`yaml:"timeout" env-default:"4s"`
-	IdleTimeout  time.Duration 	`yaml:"idle_timeout" env-default:"60s"`
-	User		 string			`yaml:"user" env-required:"true"`
-	Password	 string			`yaml:"password" env-required:"true" env:"HTTP_SERVER_PASSWORD"`
+	Address     string        `yaml:"address" env-default:"localhost:8080"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	User        string        `yaml:"user" env-required:"true"`
+	Password    string        `yaml:"password" env-required:"true" env:"HTTP_SERVER_PASSWORD"`
 }
 
-// Must-функции не возвращают ошибку, а паникуют
 func MustLoad() *Config {
-	configPath := "config/local.yaml"	// переписать через os.Getenv
-	if configPath == "" {
-		log.Fatal("CONFIG_PATH is not set")
+	path := fetchConfigPath()
+	if path == "" {
+		panic("config path is empty")
 	}
 
-	// check if file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf("config file does not exist: %s", configPath)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		panic("config file doesn't exist: " + path)
 	}
 
 	var cfg Config
-
-	// reading configuration file
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
+	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+		panic("failed to read config" + err.Error())
 	}
 
 	return &cfg
+}
+
+// fetchConfigPath fetches config path from command line or environment variable
+// Priority: flag > env > default
+func fetchConfigPath() string {
+	var res string
+
+	// --config="path/to/config.yaml"
+	flag.StringVar(&res, "config", "", "path to config file")
+	flag.Parse()
+
+	if res == "" {
+		res = os.Getenv("CONFIG_PATH")
+	}
+
+	if res == "" {
+		res = "./config/local.yaml"
+	}
+
+	return res
 }
